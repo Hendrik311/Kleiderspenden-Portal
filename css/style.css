@@ -1,1 +1,25 @@
 /* Eigene, ergänzende Styles - Bootstrap deckt die Basis der Gestaltung bereits ab */
+
+/* Verhindert, dass vor dem Start von Vue.js die Platzhalter {{ ... }} sichtbar sind */
+[v-cloak] {
+  display: none !important;
+}
+
+/* Logo in der Navigationsleiste */
+.logo {
+  height: 48px;
+  width: 48px;
+  /* Das Logo ist querformatig: nur den mittigen, quadratischen Teil mit dem Kreis anzeigen */
+  object-fit: cover;
+}
+
+/* Auf schmalen Bildschirmen darf der Name umbrechen, damit der Menü-Button daneben Platz hat */
+@media (max-width: 575.98px) {
+  .navbar-brand {
+    white-space: normal;
+    min-width: 0;
+    flex: 1;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+}

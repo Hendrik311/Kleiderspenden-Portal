@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kleiderspenden-Registrierung</title>
+  <link rel="icon" href="img/logo.webp" type="image/webp">
 
   <!-- Bootstrap CSS (CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
@@ -13,24 +14,130 @@
 </head>
 <body>
 
-  <div id="app">
+  <div id="app" class="d-flex flex-column min-vh-100" v-cloak>
     <!-- Vue.js übernimmt ab hier die dynamische Darstellung -->
+
+    <!-- Kopfbereich mit Logo und Navigation -->
     <header>
-      <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container-fluid">
-          <span class="navbar-brand mb-0 h1">Kleiderspenden-Registrierung</span>
+      <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
+        <div class="container">
+          <a class="navbar-brand d-flex align-items-center gap-2" href="#/start">
+            <img src="img/logo.webp" alt="Logo der Kleiderspenden-Registrierung" class="logo">
+            <span>Kleiderspenden-Verein</span>
+          </a>
+
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#hauptnavigation"
+                  aria-controls="hauptnavigation" aria-expanded="false" aria-label="Navigation ein-/ausblenden">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+
+          <div class="collapse navbar-collapse" id="hauptnavigation">
+            <ul class="navbar-nav ms-auto">
+              <li class="nav-item" v-for="eintrag in navigation" :key="eintrag.seite">
+                <a class="nav-link" :class="{ active: seite === eintrag.seite }"
+                   :aria-current="seite === eintrag.seite ? 'page' : null"
+                   :href="'#/' + eintrag.seite">{{ eintrag.titel }}</a>
+              </li>
+            </ul>
+          </div>
         </div>
       </nav>
     </header>
 
-    <main class="container my-4">
-      <p>{{ nachricht }}</p>
+    <!-- Hauptinhalt: je nach gewählter Seite wird ein anderer Bereich angezeigt -->
+    <main class="container my-4 flex-grow-1">
+
+      <section v-if="seite === 'start'">
+        <h1>Willkommen</h1>
+        <p>Hier können Sie Ihre Kleiderspende registrieren – egal ob Sie die Kleidung bei unserer
+           Geschäftsstelle abgeben oder von uns abholen lassen möchten.</p>
+        <a class="btn btn-primary" href="#/spende">Jetzt Spende registrieren</a>
+      </section>
+
+      <section v-else-if="seite === 'spende'">
+        <h1>Spende registrieren</h1>
+        <p class="text-muted">Das Registrierungsformular folgt.</p>
+      </section>
+
+      <section v-else-if="seite === 'impressum'">
+        <h1>Impressum</h1>
+        <p class="text-muted">Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)</p>
+
+        <h2 class="h5 mt-4">Anbieter</h2>
+        <p>
+          Kleiderspenden-Verein<br>
+          Musterstraße 1<br>
+          12345 Musterstadt
+        </p>
+
+        <h2 class="h5 mt-4">Vertreten durch</h2>
+        <p>Geschäftsführer Max Mustermann</p>
+
+        <h2 class="h5 mt-4">Kontakt</h2>
+        <p>
+          Telefon: <a href="tel:+491234567890">01234/567890</a><br>
+          E-Mail: <a href="mailto:mustermann@xy.org">mustermann@xy.org</a>
+        </p>
+
+        <h2 class="h5 mt-4">Registereintrag</h2>
+        <p>
+          Vereinsregister: Amtsgericht Musterstadt<br>
+          Vereinsregisternummer: 12 AB 2345
+        </p>
+
+        <h2 class="h5 mt-4">Umsatzsteuer</h2>
+        <p>Umsatzsteuer-Identifikationsnummer: DE123456789</p>
+
+        <h2 class="h5 mt-4">Verantwortlich für den Inhalt</h2>
+        <p>Hendrik Amels</p>
+      </section>
+
+      <section v-else-if="seite === 'datenschutz'">
+        <h1>Datenschutzerklärung</h1>
+
+        <h2 class="h5 mt-4">1. Verantwortliche Stelle</h2>
+        <p>
+          Kleiderspenden-Verein, Musterstraße 1, 12345 Musterstadt<br>
+          E-Mail: <a href="mailto:mustermann@xy.org">mustermann@xy.org</a> – weitere Angaben im <a href="#/impressum">Impressum</a>.
+        </p>
+
+        <h2 class="h5 mt-4">2. Erhobene Daten</h2>
+        <p>Bei der Registrierung einer Spende verarbeiten wir die von Ihnen eingegebenen Angaben
+           (z. B. Art der Kleidung, Krisengebiet und bei einer Abholung Ihre Adresse) ausschließlich
+           zur Abwicklung der Spende.</p>
+
+        <h2 class="h5 mt-4">3. Rechtsgrundlage</h2>
+        <p>[Rechtsgrundlage nach Art. 6 Abs. 1 DSGVO]</p>
+
+        <h2 class="h5 mt-4">4. Speicherdauer</h2>
+        <p>[Angaben zur Speicherdauer]</p>
+
+        <h2 class="h5 mt-4">5. Ihre Rechte</h2>
+        <p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung,
+           Datenübertragbarkeit und Widerspruch sowie das Recht auf Beschwerde bei einer
+           Datenschutz-Aufsichtsbehörde.</p>
+
+        <h2 class="h5 mt-4">6. Externe Dienste</h2>
+        <p>Diese Seite lädt Bootstrap über jsDelivr und Vue.js über unpkg. Dabei wird Ihre IP-Adresse
+           an die jeweiligen Anbieter übermittelt.</p>
+      </section>
+
     </main>
 
-    <footer class="bg-light text-center py-3 mt-4">
-      <p class="mb-0">&copy; 2026 Kleiderspenden-Registrierung &ndash; Rechtliche Hinweise folgen</p>
+    <!-- Fußbereich mit rechtlichen Hinweisen -->
+    <footer class="bg-light border-top py-3">
+      <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+        <p class="mb-0">&copy; {{ jahr }} Kleiderspenden-Verein</p>
+        <ul class="nav">
+          <li class="nav-item"><a class="nav-link px-2 text-body-secondary" href="#/impressum">Impressum</a></li>
+          <li class="nav-item"><a class="nav-link px-2 text-body-secondary" href="#/datenschutz">Datenschutz</a></li>
+        </ul>
+      </div>
     </footer>
   </div>
+
+  <!-- Bootstrap JS (CDN) – wird für das aufklappbare Menü auf kleinen Bildschirmen benötigt -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <!-- Vue.js (CDN) -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
