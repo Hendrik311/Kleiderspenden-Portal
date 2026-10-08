@@ -56,7 +56,144 @@
 
       <section v-else-if="seite === 'spende'">
         <h1>Spende registrieren</h1>
-        <p class="text-muted">Das Registrierungsformular folgt.</p>
+
+        <!-- Registrierungsformular. @submit.prevent verhindert, dass die Seite beim Absenden neu lädt.
+             "row g-3" ordnet die Felder in einem Raster mit gleichmäßigem Abstand an. -->
+        <form class="row g-3" @submit.prevent>
+
+          <!-- Übergabeart: Radio-Buttons, von denen nur einer gewählt sein kann -->
+          <fieldset class="col-12">
+            <legend class="form-label fs-6">Übergabeart</legend>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="uebergabeart" id="uebergabe-geschaeftsstelle"
+                     value="geschaeftsstelle" v-model="formular.uebergabeart">
+              <label class="form-check-label" for="uebergabe-geschaeftsstelle">Übergabe an der Geschäftsstelle</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="uebergabeart" id="uebergabe-abholung"
+                     value="abholung" v-model="formular.uebergabeart">
+              <label class="form-check-label" for="uebergabe-abholung">Abholung</label>
+            </div>
+          </fieldset>
+
+          <!-- Kleidungsstück-Typ: aufklappbare Liste mit Checkboxen (Mehrfachauswahl).
+               data-bs-auto-close="outside" lässt die Liste beim Anhaken offen;
+               sie schließt sich erst bei einem Klick außerhalb. -->
+          <div class="col-md-6">
+            <label for="kleidungstypen-button" class="form-label">Kleidungsstück-Typ</label>
+            <div class="dropdown">
+              <button id="kleidungstypen-button" class="form-select text-start text-truncate" type="button"
+                      data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                {{ kleidungstypenAnzeige }}
+              </button>
+              <ul class="dropdown-menu w-100 p-2">
+                <!-- Oberster Eintrag: hakt alle Typen an bzw. wieder ab -->
+                <li>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="kleidungstypen-alle"
+                           v-model="alleTypenGewaehlt">
+                    <label class="form-check-label" for="kleidungstypen-alle">Alle auswählen</label>
+                  </div>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <!-- Für jeden Typ aus optionen.kleidungstypen eine eigene Checkbox -->
+                <li v-for="(typ, index) in optionen.kleidungstypen" :key="typ">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" :id="'kleidungstyp-' + index"
+                           :value="typ" v-model="formular.kleidungstypen">
+                    <label class="form-check-label" :for="'kleidungstyp-' + index">{{ typ }}</label>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Zielgruppe: gleich aufgebaut wie der Kleidungsstück-Typ -->
+          <div class="col-md-6">
+            <label for="zielgruppen-button" class="form-label">Zielgruppe</label>
+            <div class="dropdown">
+              <button id="zielgruppen-button" class="form-select text-start text-truncate" type="button"
+                      data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                {{ zielgruppenAnzeige }}
+              </button>
+              <ul class="dropdown-menu w-100 p-2">
+                <!-- Oberster Eintrag: hakt alle Zielgruppen an bzw. wieder ab -->
+                <li>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="zielgruppen-alle"
+                           v-model="alleZielgruppenGewaehlt">
+                    <label class="form-check-label" for="zielgruppen-alle">Alle auswählen</label>
+                  </div>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <!-- Für jede Zielgruppe aus optionen.zielgruppen eine eigene Checkbox -->
+                <li v-for="(gruppe, index) in optionen.zielgruppen" :key="gruppe">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" :id="'zielgruppe-' + index"
+                           :value="gruppe" v-model="formular.zielgruppen">
+                    <label class="form-check-label" :for="'zielgruppe-' + index">{{ gruppe }}</label>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Krisengebiet: einfache Auswahlliste (nur ein Eintrag wählbar) -->
+          <div class="col-md-6">
+            <label for="krisengebiet" class="form-label">Krisengebiet</label>
+            <select id="krisengebiet" class="form-select" v-model="formular.krisengebiet">
+              <option value="" disabled>Bitte wählen</option>
+              <option v-for="gebiet in optionen.krisengebiete" :key="gebiet" :value="gebiet">{{ gebiet }}</option>
+            </select>
+          </div>
+
+          <!-- Angaben für die Abholung. Vorerst immer sichtbar;
+               das Ein- und Ausblenden je nach Übergabeart folgt in Schritt 3. -->
+          <div class="col-12">
+            <h2 class="h5 mt-3 mb-0">Angaben zur Abholung</h2>
+          </div>
+
+          <div class="col-md-6">
+            <label for="strasse" class="form-label">Straße und Hausnummer</label>
+            <input type="text" id="strasse" class="form-control" v-model="formular.strasse">
+          </div>
+
+          <!-- inputmode="numeric" zeigt auf dem Handy die Zifferntastatur, maxlength begrenzt auf 5 Zeichen -->
+          <div class="col-md-2">
+            <label for="plz" class="form-label">PLZ</label>
+            <input type="text" id="plz" class="form-control" inputmode="numeric" maxlength="5" v-model="formular.plz">
+          </div>
+
+          <div class="col-md-4">
+            <label for="ort" class="form-label">Ort</label>
+            <input type="text" id="ort" class="form-control" v-model="formular.ort">
+          </div>
+
+          <div class="col-md-4">
+            <label for="volumen" class="form-label">Volumen</label>
+            <input type="text" id="volumen" class="form-control" placeholder="z. B. 1 Tüte oder 2 Kartons"
+                   v-model="formular.volumen">
+          </div>
+
+          <div class="col-md-4">
+            <label for="wunschdatum" class="form-label">Wunschdatum</label>
+            <input type="date" id="wunschdatum" class="form-control" v-model="formular.wunschdatum">
+          </div>
+
+          <div class="col-md-4">
+            <label for="zeitfenster" class="form-label">Zeitfenster</label>
+            <select id="zeitfenster" class="form-select" v-model="formular.zeitfenster">
+              <option value="" disabled>Bitte wählen</option>
+              <option v-for="fenster in optionen.zeitfenster" :key="fenster" :value="fenster">{{ fenster }}</option>
+            </select>
+          </div>
+
+          <!-- Absende-Button (die Verarbeitung der Eingaben folgt in einem späteren Schritt) -->
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">Spende registrieren</button>
+          </div>
+
+        </form>
       </section>
 
       <section v-else-if="seite === 'impressum'">
