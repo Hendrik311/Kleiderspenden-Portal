@@ -147,46 +147,52 @@
             </select>
           </div>
 
-          <!-- Angaben für die Abholung. Vorerst immer sichtbar;
-               das Ein- und Ausblenden je nach Übergabeart folgt in Schritt 3. -->
-          <div class="col-12">
-            <h2 class="h5 mt-3 mb-0">Angaben zur Abholung</h2>
-          </div>
+          <!-- Angaben für die Abholung. Eine Adresse und ein Termin werden nur gebraucht,
+               wenn die Kleidung abgeholt werden soll. Deshalb erscheinen diese Felder nur,
+               wenn bei der Übergabeart "Abholung" gewählt ist.
+               v-if entfernt die Felder sonst ganz aus der Seite (nicht nur unsichtbar).
+               <template> selbst wird nicht angezeigt; es fasst die Felder nur zusammen,
+               damit das Raster (col-md-...) unverändert bleibt. -->
+          <template v-if="formular.uebergabeart === 'abholung'">
+            <div class="col-12">
+              <h2 class="h5 mt-3 mb-0">Angaben zur Abholung</h2>
+            </div>
 
-          <div class="col-md-6">
-            <label for="strasse" class="form-label">Straße und Hausnummer</label>
-            <input type="text" id="strasse" class="form-control" v-model="formular.strasse">
-          </div>
+            <div class="col-md-6">
+              <label for="strasse" class="form-label">Straße und Hausnummer</label>
+              <input type="text" id="strasse" class="form-control" v-model="formular.strasse">
+            </div>
 
-          <!-- inputmode="numeric" zeigt auf dem Handy die Zifferntastatur, maxlength begrenzt auf 5 Zeichen -->
-          <div class="col-md-2">
-            <label for="plz" class="form-label">PLZ</label>
-            <input type="text" id="plz" class="form-control" inputmode="numeric" maxlength="5" v-model="formular.plz">
-          </div>
+            <!-- inputmode="numeric" zeigt auf dem Handy die Zifferntastatur, maxlength begrenzt auf 5 Zeichen -->
+            <div class="col-md-2">
+              <label for="plz" class="form-label">PLZ</label>
+              <input type="text" id="plz" class="form-control" inputmode="numeric" maxlength="5" v-model="formular.plz">
+            </div>
 
-          <div class="col-md-4">
-            <label for="ort" class="form-label">Ort</label>
-            <input type="text" id="ort" class="form-control" v-model="formular.ort">
-          </div>
+            <div class="col-md-4">
+              <label for="ort" class="form-label">Ort</label>
+              <input type="text" id="ort" class="form-control" v-model="formular.ort">
+            </div>
 
-          <div class="col-md-4">
-            <label for="volumen" class="form-label">Volumen</label>
-            <input type="text" id="volumen" class="form-control" placeholder="z. B. 1 Tüte oder 2 Kartons"
-                   v-model="formular.volumen">
-          </div>
+            <div class="col-md-4">
+              <label for="volumen" class="form-label">Volumen</label>
+              <input type="text" id="volumen" class="form-control" placeholder="z. B. 1 Tüte oder 2 Kartons"
+                     v-model="formular.volumen">
+            </div>
 
-          <div class="col-md-4">
-            <label for="wunschdatum" class="form-label">Wunschdatum</label>
-            <input type="date" id="wunschdatum" class="form-control" v-model="formular.wunschdatum">
-          </div>
+            <div class="col-md-4">
+              <label for="wunschdatum" class="form-label">Wunschdatum</label>
+              <input type="date" id="wunschdatum" class="form-control" v-model="formular.wunschdatum">
+            </div>
 
-          <div class="col-md-4">
-            <label for="zeitfenster" class="form-label">Zeitfenster</label>
-            <select id="zeitfenster" class="form-select" v-model="formular.zeitfenster">
-              <option value="" disabled>Bitte wählen</option>
-              <option v-for="fenster in optionen.zeitfenster" :key="fenster" :value="fenster">{{ fenster }}</option>
-            </select>
-          </div>
+            <div class="col-md-4">
+              <label for="zeitfenster" class="form-label">Zeitfenster</label>
+              <select id="zeitfenster" class="form-select" v-model="formular.zeitfenster">
+                <option value="" disabled>Bitte wählen</option>
+                <option v-for="fenster in optionen.zeitfenster" :key="fenster" :value="fenster">{{ fenster }}</option>
+              </select>
+            </div>
+          </template>
 
           <!-- Absende-Button (die Verarbeitung der Eingaben folgt in einem späteren Schritt) -->
           <div class="col-12">

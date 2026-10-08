@@ -104,6 +104,27 @@ createApp({
     }
   },
 
+  // watch beobachtet einzelne Daten. Ändert sich ein beobachteter Wert,
+  // ruft Vue automatisch die zugehörige Funktion auf.
+  watch: {
+    // Wird aufgerufen, sobald eine andere Übergabeart angeklickt wird.
+    // neueArt enthält den neu gewählten Wert ('geschaeftsstelle' oder 'abholung').
+    'formular.uebergabeart'(neueArt) {
+      // Wer erst eine Adresse eintippt und dann doch zur Geschäftsstelle wechselt,
+      // soll keine alten Abholdaten im Formular zurücklassen. Sonst könnten sie später
+      // versehentlich auf der Bestätigungsseite erscheinen. Deshalb werden alle
+      // Abholfelder geleert, sobald nicht mehr "Abholung" gewählt ist.
+      if (neueArt !== 'abholung') {
+        this.formular.strasse = '';
+        this.formular.plz = '';
+        this.formular.ort = '';
+        this.formular.volumen = '';
+        this.formular.wunschdatum = '';
+        this.formular.zeitfenster = '';
+      }
+    }
+  },
+
   // mounted() wird einmal aufgerufen, sobald Vue die Seite dargestellt hat
   mounted() {
     // Bei jedem Klick auf einen Link wie #/impressum ändert sich die Adresse;
