@@ -206,7 +206,10 @@
 
             <div class="col-md-4">
               <label for="wunschdatum" class="form-label">Wunschdatum</label>
-              <input type="date" id="wunschdatum" class="form-control" v-model="formular.wunschdatum">
+              <!-- :min="heute" sperrt im Kalender alle Tage vor dem heutigen Datum -->
+              <input type="date" id="wunschdatum" class="form-control" :class="{ 'is-invalid': fehler.wunschdatum }"
+                     :min="heute" v-model="formular.wunschdatum">
+              <div class="invalid-feedback">{{ fehler.wunschdatum }}</div>
             </div>
 
             <div class="col-md-4">

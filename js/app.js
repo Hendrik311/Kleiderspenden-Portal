@@ -109,6 +109,19 @@ createApp({
         return 'Alle Zielgruppen';
       }
       return this.formular.zielgruppen.join(', ');
+    },
+
+    // --- Wunschdatum ---
+
+    // Heutiges Datum (lokale Zeit) als Text im Format JJJJ-MM-TT, z. B. "2026-10-09".
+    // Dieses Format verwendet auch das Datumsfeld, deshalb lassen sich beide direkt vergleichen.
+    // padStart(2, '0') macht aus "7" eine "07".
+    heute() {
+      const jetzt = new Date();
+      const jahr = jetzt.getFullYear();
+      const monat = String(jetzt.getMonth() + 1).padStart(2, '0');   // getMonth() zählt ab 0
+      const tag = String(jetzt.getDate()).padStart(2, '0');
+      return `${jahr}-${monat}-${tag}`;
     }
   },
 
@@ -132,9 +145,32 @@ createApp({
       }
 
       // Alte Fehlermeldungen entfernen, damit z. B. keine Fehler der
-      // Abholfelder stehen bleiben, die gerade gar nicht angezeigt werden
+      // Abholfelder stehen bleiben, die gerade gar nicht angezeigt werden.
+      // Damit verschwindet auch die Meldung der Übergabeart selbst.
       this.fehler = {};
-    }
+    },
+
+    // --- Fehlermeldung eines Feldes verschwindet, sobald es geändert wird ---
+    // Ein Watcher pro Feld ist hier am zuverlässigsten: Er bemerkt jede Änderung,
+    // egal auf welchem Weg sie passiert (Tippen, Anklicken, Auswahlliste oder
+    // "Alle auswählen"). Ein Ereignis wie @input am Feld würde z. B. "Alle auswählen"
+    // nicht erfassen, weil dort die Liste über computed geändert wird.
+    // deep: true sorgt bei Listen dafür, dass auch das Anhaken oder Abhaken
+    // eines einzelnen Eintrags bemerkt wird.
+    'formular.kleidungstypen': {
+      handler() { this.fehlerLoeschen('kleidungstypen'); },
+      deep: true
+    },
+    'formular.zielgruppen': {
+      handler() { this.fehlerLoeschen('zielgruppen'); },
+      deep: true
+    },
+    'formular.krisengebiet'() { this.fehlerLoeschen('krisengebiet'); },
+    'formular.strasse'() { this.fehlerLoeschen('strasse'); },
+    'formular.plz'() { this.fehlerLoeschen('plz'); },
+    'formular.ort'() { this.fehlerLoeschen('ort'); },
+    'formular.volumen'() { this.fehlerLoeschen('volumen'); },
+    'formular.wunschdatum'() { this.fehlerLoeschen('wunschdatum'); }
   },
 
   // methods enthält Funktionen, die z. B. beim Absenden des Formulars aufgerufen werden
@@ -162,9 +198,22 @@ createApp({
       // Diese Angaben sind nur bei einer Abholung Pflicht.
       // trim() entfernt Leerzeichen am Anfang und Ende, sodass eine Eingabe
       // aus nur Leerzeichen als leer gilt.
+      //
+      // Schutz gegen Code-Injektion (z. B. <script>alert(1)</script>):
+      // - Eingabeseite: Die Freitextfelder werden mit einer Whitelist geprüft, d. h. es
+      //   ist festgelegt, welche Zeichen ERLAUBT sind (statt verbotene aufzuzählen, was man
+      //   leicht vergisst). Zeichen wie < > " ; = sind nicht erlaubt, die Eingabe wird abgelehnt.
+      //   \p{L} = alle Buchstaben (auch ä, ö, ü, ß), \p{N} = alle Ziffern;
+      //   das Flag u am Ende ist nötig, damit \p{...} funktioniert.
+      // - Ausgabeseite: Vue maskiert alles, was mit {{ }} angezeigt wird, automatisch.
+      //   Dadurch wird ein Text wie <script> nur als Text angezeigt, nie ausgeführt.
+      //   Deshalb im Projekt kein v-html, innerHTML oder eval verwenden.
       if (f.uebergabeart === 'abholung') {
-        if (f.strasse.trim() === '') {
+        const strasse = f.strasse.trim();
+        if (strasse === '') {
           fehler.strasse = 'Bitte geben Sie Straße und Hausnummer an.';
+        } else if (!/^[\p{L}\p{N} .,'\/-]+$/u.test(strasse)) {
+          fehler.strasse = 'Straße und Hausnummer enthalten unzulässige Zeichen.';
         }
 
         // PLZ: erst prüfen, ob etwas eingegeben wurde, dann ob es genau
@@ -178,13 +227,28 @@ createApp({
           fehler.plz = 'Die Abholung ist nur im Postleitzahlengebiet 99 möglich.';
         }
 
-        if (f.ort.trim() === '') {
+        // Ort: nur Buchstaben, Leerzeichen, Punkt, Apostroph, Klammern und Bindestrich
+        const ort = f.ort.trim();
+        if (ort === '') {
           fehler.ort = 'Bitte geben Sie den Ort an.';
+        } else if (!/^[\p{L} .'()-]+$/u.test(ort)) {
+          fehler.ort = 'Der Ort enthält unzulässige Zeichen.';
         }
-        if (f.volumen.trim() === '') {
+
+        // Volumen: Buchstaben, Ziffern, Leerzeichen und . , ' / + -
+        const volumen = f.volumen.trim();
+        if (volumen === '') {
           fehler.volumen = 'Bitte geben Sie das ungefähre Volumen an.';
+        } else if (!/^[\p{L}\p{N} .,'\/+-]+$/u.test(volumen)) {
+          fehler.volumen = 'Das Volumen enthält unzulässige Zeichen.';
         }
-        // Wunschdatum und Zeitfenster sind freiwillig und werden nicht geprüft
+
+        // Wunschdatum ist freiwillig. Wenn eins gewählt ist, darf es nicht vor heute liegen.
+        // Bei Texten im Format JJJJ-MM-TT entspricht der Textvergleich (<) der Datumsreihenfolge.
+        if (f.wunschdatum !== '' && f.wunschdatum < this.heute) {
+          fehler.wunschdatum = 'Das Wunschdatum darf nicht in der Vergangenheit liegen.';
+        }
+        // Zeitfenster ist freiwillig und wird nicht geprüft
       }
 
       this.fehler = fehler;
@@ -194,6 +258,12 @@ createApp({
     // Wird beim Klick auf "Spende registrieren" aufgerufen
     absenden() {
       this.eingabeGueltig = this.pruefen();
+    },
+
+    // Entfernt die Fehlermeldung eines einzelnen Feldes (z. B. 'plz').
+    // Die Meldungen der anderen Felder bleiben stehen.
+    fehlerLoeschen(feld) {
+      delete this.fehler[feld];
     }
   },
 
