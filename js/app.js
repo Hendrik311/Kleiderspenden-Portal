@@ -47,7 +47,15 @@ createApp({
         zielgruppen: ['Herren', 'Damen', 'Kinder'],
         krisengebiete: ['Ukraine', 'Gaza-Streifen', 'Sudan', 'Myanmar'],
         zeitfenster: ['08–12 Uhr', '12–16 Uhr', '16–19 Uhr']
-      }
+      },
+
+      // Fehlermeldungen der Prüfung: Schlüssel = Feldname, Wert = Meldung
+      // (z. B. { plz: 'Bitte geben Sie die Postleitzahl an.' }). Leer = keine Fehler.
+      fehler: {},
+
+      // vorläufig, wird in Schritt 6 ersetzt
+      // true, wenn die letzte Prüfung ohne Fehler war (zeigt die grüne Meldung)
+      eingabeGueltig: false
     };
   },
 
@@ -122,6 +130,70 @@ createApp({
         this.formular.wunschdatum = '';
         this.formular.zeitfenster = '';
       }
+
+      // Alte Fehlermeldungen entfernen, damit z. B. keine Fehler der
+      // Abholfelder stehen bleiben, die gerade gar nicht angezeigt werden
+      this.fehler = {};
+    }
+  },
+
+  // methods enthält Funktionen, die z. B. beim Absenden des Formulars aufgerufen werden
+  methods: {
+    // Prüft alle Eingaben. Füllt this.fehler neu und gibt true zurück,
+    // wenn kein Fehler gefunden wurde.
+    pruefen() {
+      const f = this.formular;
+      const fehler = {};
+
+      // Diese Angaben sind immer Pflicht
+      if (f.uebergabeart === '') {
+        fehler.uebergabeart = 'Bitte wählen Sie eine Übergabeart.';
+      }
+      if (f.kleidungstypen.length === 0) {
+        fehler.kleidungstypen = 'Bitte wählen Sie mindestens einen Kleidungsstück-Typ.';
+      }
+      if (f.zielgruppen.length === 0) {
+        fehler.zielgruppen = 'Bitte wählen Sie mindestens eine Zielgruppe.';
+      }
+      if (f.krisengebiet === '') {
+        fehler.krisengebiet = 'Bitte wählen Sie ein Krisengebiet.';
+      }
+
+      // Diese Angaben sind nur bei einer Abholung Pflicht.
+      // trim() entfernt Leerzeichen am Anfang und Ende, sodass eine Eingabe
+      // aus nur Leerzeichen als leer gilt.
+      if (f.uebergabeart === 'abholung') {
+        if (f.strasse.trim() === '') {
+          fehler.strasse = 'Bitte geben Sie Straße und Hausnummer an.';
+        }
+
+        // PLZ: erst prüfen, ob etwas eingegeben wurde, dann ob es genau
+        // fünf Ziffern sind (/^\d{5}$/), dann ob sie mit 99 beginnt
+        const plz = f.plz.trim();
+        if (plz === '') {
+          fehler.plz = 'Bitte geben Sie die Postleitzahl an.';
+        } else if (!/^\d{5}$/.test(plz)) {
+          fehler.plz = 'Die Postleitzahl muss aus genau fünf Ziffern bestehen.';
+        } else if (!plz.startsWith('99')) {
+          fehler.plz = 'Die Abholung ist nur im Postleitzahlengebiet 99 möglich.';
+        }
+
+        if (f.ort.trim() === '') {
+          fehler.ort = 'Bitte geben Sie den Ort an.';
+        }
+        if (f.volumen.trim() === '') {
+          fehler.volumen = 'Bitte geben Sie das ungefähre Volumen an.';
+        }
+        // Wunschdatum und Zeitfenster sind freiwillig und werden nicht geprüft
+      }
+
+      this.fehler = fehler;
+      return Object.keys(fehler).length === 0;   // keine Einträge = alles gültig
+    },
+
+    // Wird beim Klick auf "Spende registrieren" aufgerufen
+    absenden() {
+      this.eingabeGueltig = this.pruefen();
     }
   },
 
