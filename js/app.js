@@ -11,6 +11,24 @@ function seiteAusAdresse() {
   return SEITEN.includes(seite) ? seite : 'start';
 }
 
+// Anfangswerte des Formulars. Sie werden an zwei Stellen gebraucht: in data() beim Start
+// und beim Zurücksetzen über "Neue Spende registrieren". So stehen sie nur einmal im Code.
+// Als Funktion, damit jedes Mal ein neues Objekt mit neuen, leeren Listen entsteht.
+function leeresFormular() {
+  return {
+    uebergabeart: '',     // 'geschaeftsstelle' oder 'abholung'
+    kleidungstypen: [],   // Liste, weil mehrere Typen angehakt werden können
+    zielgruppen: [],      // Liste, weil mehrere Zielgruppen angehakt werden können
+    krisengebiet: '',
+    strasse: '',          // Felder ab hier nur für die Abholung
+    plz: '',
+    ort: '',
+    volumen: '',
+    wunschdatum: '',
+    zeitfenster: ''
+  };
+}
+
 // createApp erzeugt die Vue-Anwendung. Das übergebene Objekt beschreibt,
 // welche Daten die Anwendung hat und was beim Start passieren soll.
 createApp({
@@ -27,18 +45,15 @@ createApp({
       ],
 
       // Eingaben aus dem Registrierungsformular. Jedes Feld ist über v-model
-      // mit einem Eingabefeld in index.html verbunden.
-      formular: {
-        uebergabeart: '',     // 'geschaeftsstelle' oder 'abholung'
-        kleidungstypen: [],   // Liste, weil mehrere Typen angehakt werden können
-        zielgruppen: [],      // Liste, weil mehrere Zielgruppen angehakt werden können
-        krisengebiet: '',
-        strasse: '',          // Felder ab hier nur für die Abholung
-        plz: '',
-        ort: '',
-        volumen: '',
-        wunschdatum: '',
-        zeitfenster: ''
+      // mit einem Eingabefeld in index.html verbunden. Anfangswerte siehe leeresFormular().
+      formular: leeresFormular(),
+
+      // Geschäftsstelle für die Übergabe vor Ort (gleiche Adresse wie im Impressum)
+      geschaeftsstelle: {
+        name: 'Kleiderspenden-Verein',
+        strasse: 'Musterstraße 1',
+        plz: '99084',
+        ort: 'Erfurt'
       },
 
       // Auswahlmöglichkeiten für die Listen im Formular
@@ -53,9 +68,12 @@ createApp({
       // (z. B. { plz: 'Bitte geben Sie die Postleitzahl an.' }). Leer = keine Fehler.
       fehler: {},
 
-      // vorläufig, wird in Schritt 6 ersetzt
-      // true, wenn die letzte Prüfung ohne Fehler war (zeigt die grüne Meldung)
-      eingabeGueltig: false
+      // true, sobald die Spende erfolgreich registriert wurde: Dann wird statt
+      // des Formulars die Bestätigungsseite angezeigt
+      bestaetigt: false,
+
+      // Zeitpunkt der Registrierung (wird beim Absenden automatisch gesetzt), vorher null
+      zeitpunkt: null
     };
   },
 
@@ -122,6 +140,39 @@ createApp({
       const monat = String(jetzt.getMonth() + 1).padStart(2, '0');   // getMonth() zählt ab 0
       const tag = String(jetzt.getDate()).padStart(2, '0');
       return `${jahr}-${monat}-${tag}`;
+    },
+
+    // --- Bestätigungsseite ---
+
+    // Zeitpunkt der Registrierung auf Deutsch, z. B. "09.10.2026, 22:15 Uhr".
+    // '2-digit' sorgt für zweistellige Angaben (z. B. 09 statt 9).
+    registriertAm() {
+      if (this.zeitpunkt === null) {
+        return '';
+      }
+      const datum = this.zeitpunkt.toLocaleDateString('de-DE',
+        { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const uhrzeit = this.zeitpunkt.toLocaleTimeString('de-DE',
+        { hour: '2-digit', minute: '2-digit' });
+      return `${datum}, ${uhrzeit} Uhr`;
+    },
+
+    // Wunschtermin für die Bestätigungsseite, z. B. "20.10.2026, 12–16 Uhr".
+    // Fehlt Datum oder Zeitfenster, wird nur der vorhandene Teil angezeigt.
+    wunschterminAnzeige() {
+      const teile = [];
+      if (this.formular.wunschdatum !== '') {
+        // Aus "2026-10-20" wird "20.10.2026": an den Bindestrichen trennen,
+        // Reihenfolge umdrehen und mit Punkten verbinden
+        teile.push(this.formular.wunschdatum.split('-').reverse().join('.'));
+      }
+      if (this.formular.zeitfenster !== '') {
+        teile.push(this.formular.zeitfenster);
+      }
+      if (teile.length === 0) {
+        return 'kein Wunschtermin angegeben';
+      }
+      return teile.join(', ');
     }
   },
 
@@ -255,9 +306,25 @@ createApp({
       return Object.keys(fehler).length === 0;   // keine Einträge = alles gültig
     },
 
-    // Wird beim Klick auf "Spende registrieren" aufgerufen
+    // Wird beim Klick auf "Spende registrieren" aufgerufen.
+    // Sind alle Eingaben gültig, wird der Zeitpunkt gemerkt und die Bestätigungsseite angezeigt.
+    // Sonst bleibt das Formular mit den Fehlermeldungen stehen.
     absenden() {
-      this.eingabeGueltig = this.pruefen();
+      if (this.pruefen()) {
+        this.zeitpunkt = new Date();   // aktuelles Datum und Uhrzeit
+        this.bestaetigt = true;
+        window.scrollTo(0, 0);         // nach oben scrollen, damit die Bestätigung sichtbar ist
+      }
+    },
+
+    // Wird beim Klick auf "Neue Spende registrieren" aufgerufen:
+    // setzt alles auf den Anfang zurück und zeigt wieder das leere Formular
+    neueSpende() {
+      this.formular = leeresFormular();
+      this.fehler = {};
+      this.bestaetigt = false;
+      this.zeitpunkt = null;
+      window.scrollTo(0, 0);
     },
 
     // Entfernt die Fehlermeldung eines einzelnen Feldes (z. B. 'plz').

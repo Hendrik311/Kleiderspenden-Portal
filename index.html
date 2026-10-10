@@ -57,18 +57,70 @@
       <section v-else-if="seite === 'spende'">
         <h1>Spende registrieren</h1>
 
-        <!-- vorläufig, wird in Schritt 6 ersetzt: grüne Meldung, wenn alle Eingaben gültig sind -->
-        <div class="alert alert-success" v-if="eingabeGueltig">
-          Eingaben gültig. Die Bestätigungsseite folgt in Schritt 6.
+        <!-- Bestätigungsseite: erscheint nach erfolgreicher Prüfung (bestaetigt = true)
+             an Stelle des Formulars. v-if / v-else wechselt zwischen beiden, ohne neue Adresse
+             und ohne Neuladen.
+             Sicherheit (Ausgabeseite des Schutzes aus Schritt 5): Alle Werte werden nur mit {{ }}
+             ausgegeben. Vue maskiert sie dabei automatisch, sodass z. B. <script> nur als Text
+             erscheint und nie ausgeführt wird. Deshalb hier kein v-html verwenden. -->
+        <div v-if="bestaetigt">
+          <div class="alert alert-success">
+            <h2 class="h5 mb-0">Vielen Dank – Ihre Spende wurde registriert.</h2>
+          </div>
+
+          <!-- Übersicht der Angaben: links die Bezeichnung (dt), rechts der Wert (dd) -->
+          <dl class="row">
+            <dt class="col-sm-4">Kleidungsstück-Typ</dt>
+            <dd class="col-sm-8">{{ kleidungstypenAnzeige }}</dd>
+
+            <dt class="col-sm-4">Zielgruppe</dt>
+            <dd class="col-sm-8">{{ zielgruppenAnzeige }}</dd>
+
+            <dt class="col-sm-4">Krisengebiet</dt>
+            <dd class="col-sm-8">{{ formular.krisengebiet }}</dd>
+
+            <dt class="col-sm-4">Registriert am</dt>
+            <dd class="col-sm-8">{{ registriertAm }}</dd>
+
+            <!-- Je nach Übergabeart: Adresse der Geschäftsstelle oder die eingegebene Abholadresse -->
+            <dt class="col-sm-4">Übergabeart und Ort</dt>
+            <dd class="col-sm-8">
+              <template v-if="formular.uebergabeart === 'geschaeftsstelle'">
+                Übergabe an der Geschäftsstelle<br>
+                {{ geschaeftsstelle.name }}<br>
+                {{ geschaeftsstelle.strasse }}<br>
+                {{ geschaeftsstelle.plz }} {{ geschaeftsstelle.ort }}
+              </template>
+              <template v-else>
+                Abholung<br>
+                {{ formular.strasse }}<br>
+                {{ formular.plz }} {{ formular.ort }}
+              </template>
+            </dd>
+
+            <!-- Nur bei einer Abholung: Volumen und Wunschtermin -->
+            <template v-if="formular.uebergabeart === 'abholung'">
+              <dt class="col-sm-4">Volumen</dt>
+              <dd class="col-sm-8">{{ formular.volumen }}</dd>
+
+              <dt class="col-sm-4">Wunschtermin</dt>
+              <dd class="col-sm-8">{{ wunschterminAnzeige }}</dd>
+            </template>
+          </dl>
+
+          <p class="text-muted small">Ihre Angaben werden nur in Ihrem Browser angezeigt und nicht gespeichert oder versendet.</p>
+
+          <!-- Setzt alles zurück und zeigt wieder das leere Formular -->
+          <button type="button" class="btn btn-primary" @click="neueSpende">Neue Spende registrieren</button>
         </div>
 
-        <!-- Registrierungsformular. @submit.prevent="absenden" verhindert das Neuladen der Seite
+        <!-- Registrierungsformular (wird angezeigt, solange noch nicht bestätigt ist). @submit.prevent="absenden" verhindert das Neuladen der Seite
              und ruft stattdessen die Prüfung in absenden() auf.
              novalidate schaltet die eingebaute Browser-Prüfung ab; geprüft wird nur durch Vue.
              "row g-3" ordnet die Felder in einem Raster mit gleichmäßigem Abstand an.
              Bei einem Fehler bekommt das Feld die Klasse is-invalid (roter Rahmen),
              darunter steht die Meldung aus fehler.<feldname>. -->
-        <form class="row g-3" novalidate @submit.prevent="absenden">
+        <form v-else class="row g-3" novalidate @submit.prevent="absenden">
 
           <!-- Übergabeart: Radio-Buttons, von denen nur einer gewählt sein kann -->
           <fieldset class="col-12">
@@ -221,7 +273,7 @@
             </div>
           </template>
 
-          <!-- Absende-Button: startet die Prüfung in absenden() (Speichern folgt in einem späteren Schritt) -->
+          <!-- Absende-Button: startet die Prüfung in absenden(); bei Erfolg erscheint die Bestätigungsseite -->
           <div class="col-12">
             <button type="submit" class="btn btn-primary">Spende registrieren</button>
           </div>
@@ -237,7 +289,7 @@
         <p>
           Kleiderspenden-Verein<br>
           Musterstraße 1<br>
-          12345 Musterstadt
+          99084 Erfurt
         </p>
 
         <h2 class="h5 mt-4">Vertreten durch</h2>
@@ -251,7 +303,7 @@
 
         <h2 class="h5 mt-4">Registereintrag</h2>
         <p>
-          Vereinsregister: Amtsgericht Musterstadt<br>
+          Vereinsregister: Amtsgericht Erfurt<br>
           Vereinsregisternummer: 12 AB 2345
         </p>
 
@@ -267,7 +319,7 @@
 
         <h2 class="h5 mt-4">1. Verantwortliche Stelle</h2>
         <p>
-          Kleiderspenden-Verein, Musterstraße 1, 12345 Musterstadt<br>
+          Kleiderspenden-Verein, Musterstraße 1, 99084 Erfurt<br>
           E-Mail: <a href="mailto:mustermann@xy.org">mustermann@xy.org</a> – weitere Angaben im <a href="#/impressum">Impressum</a>.
         </p>
 
