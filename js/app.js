@@ -17,6 +17,7 @@ function seiteAusAdresse() {
 function leeresFormular() {
   return {
     uebergabeart: '',     // 'geschaeftsstelle' oder 'abholung'
+    name: '',             // Vor- und Nachname, immer Pflicht
     kleidungstypen: [],   // Liste, weil mehrere Typen angehakt werden können
     zielgruppen: [],      // Liste, weil mehrere Zielgruppen angehakt werden können
     krisengebiet: '',
@@ -27,6 +28,22 @@ function leeresFormular() {
     wunschdatum: '',
     zeitfenster: ''
   };
+}
+
+// Wandelt ein Datum in Text im Format JJJJ-MM-TT um (lokale Zeit), z. B. "2026-10-13".
+// Dieses Format verwendet auch das Datumsfeld im Formular.
+// padStart(2, '0') macht aus "7" eine "07".
+function datumAlsText(datum) {
+  const jahr = datum.getFullYear();
+  const monat = String(datum.getMonth() + 1).padStart(2, '0');   // getMonth() zählt ab 0
+  const tag = String(datum.getDate()).padStart(2, '0');
+  return `${jahr}-${monat}-${tag}`;
+}
+
+// Wandelt "2026-10-13" in die deutsche Schreibweise "13.10.2026" um:
+// an den Bindestrichen trennen, Reihenfolge umdrehen und mit Punkten verbinden
+function deutschesDatum(text) {
+  return text.split('-').reverse().join('.');
 }
 
 // createApp erzeugt die Vue-Anwendung. Das übergebene Objekt beschreibt,
@@ -58,7 +75,7 @@ createApp({
 
       // Auswahlmöglichkeiten für die Listen im Formular
       optionen: {
-        kleidungstypen: ['Jacken', 'Hoodie oder Sweatshirtjacke', 'T-Shirt', 'Hosen', 'Unterwäsche', 'Socken'],
+        kleidungstypen: ['Jacken', 'Hoodie/Sweatshirtjacke', 'T-Shirt', 'Hosen', 'Unterwäsche', 'Socken'],
         zielgruppen: ['Herren', 'Damen', 'Kinder'],
         krisengebiete: ['Ukraine', 'Gaza-Streifen', 'Sudan', 'Myanmar'],
         zeitfenster: ['08–12 Uhr', '12–16 Uhr', '16–19 Uhr']
@@ -73,7 +90,10 @@ createApp({
       bestaetigt: false,
 
       // Zeitpunkt der Registrierung (wird beim Absenden automatisch gesetzt), vorher null
-      zeitpunkt: null
+      zeitpunkt: null,
+
+      // Registriernummer im Format KS-JJJJMMTT-NNNN (wird beim Absenden erzeugt), vorher leer
+      registriernummer: ''
     };
   },
 
@@ -131,18 +151,42 @@ createApp({
 
     // --- Wunschdatum ---
 
-    // Heutiges Datum (lokale Zeit) als Text im Format JJJJ-MM-TT, z. B. "2026-10-09".
+    // Frühestes mögliches Abholdatum: heute plus 3 Arbeitstage (Montag bis Freitag,
+    // lokale Zeit) als Text im Format JJJJ-MM-TT, z. B. "2026-10-14".
     // Dieses Format verwendet auch das Datumsfeld, deshalb lassen sich beide direkt vergleichen.
-    // padStart(2, '0') macht aus "7" eine "07".
-    heute() {
-      const jetzt = new Date();
-      const jahr = jetzt.getFullYear();
-      const monat = String(jetzt.getMonth() + 1).padStart(2, '0');   // getMonth() zählt ab 0
-      const tag = String(jetzt.getDate()).padStart(2, '0');
-      return `${jahr}-${monat}-${tag}`;
+    // Das Wochenende wird übersprungen: Es wird Tag für Tag weitergezählt, aber nur
+    // Montag bis Freitag zählen als Arbeitstag. Beispiel: Freitag → frühestens Mittwoch.
+    // Feiertage werden bewusst nicht berücksichtigt.
+    // setDate() rechnet Monats- und Jahreswechsel automatisch richtig (z. B. 31.12. + 1 Tag).
+    fruehestesDatum() {
+      const datum = new Date();
+      let arbeitstage = 0;
+      while (arbeitstage < 3) {
+        datum.setDate(datum.getDate() + 1);   // einen Tag weiter
+        const wochentag = datum.getDay();     // 0 = Sonntag, 1 = Montag, ..., 6 = Samstag
+        if (wochentag !== 0 && wochentag !== 6) {
+          arbeitstage++;                      // nur Montag bis Freitag mitzählen
+        }
+      }
+      return datumAlsText(datum);
     },
 
     // --- Bestätigungsseite ---
+
+    // Gewählte Kleidungstypen einzeln und kommagetrennt, in der Reihenfolge der Auswahlliste
+    // (auf der Bestätigungsseite nie als "Alle Typen" zusammengefasst)
+    kleidungstypenListe() {
+      return this.optionen.kleidungstypen
+        .filter(typ => this.formular.kleidungstypen.includes(typ))
+        .join(', ');
+    },
+
+    // Gewählte Zielgruppen einzeln und kommagetrennt, in der Reihenfolge der Auswahlliste
+    zielgruppenListe() {
+      return this.optionen.zielgruppen
+        .filter(gruppe => this.formular.zielgruppen.includes(gruppe))
+        .join(', ');
+    },
 
     // Zeitpunkt der Registrierung auf Deutsch, z. B. "09.10.2026, 22:15 Uhr".
     // '2-digit' sorgt für zweistellige Angaben (z. B. 09 statt 9).
@@ -157,22 +201,19 @@ createApp({
       return `${datum}, ${uhrzeit} Uhr`;
     },
 
-    // Wunschtermin für die Bestätigungsseite, z. B. "20.10.2026, 12–16 Uhr".
-    // Fehlt Datum oder Zeitfenster, wird nur der vorhandene Teil angezeigt.
-    wunschterminAnzeige() {
-      const teile = [];
-      if (this.formular.wunschdatum !== '') {
-        // Aus "2026-10-20" wird "20.10.2026": an den Bindestrichen trennen,
-        // Reihenfolge umdrehen und mit Punkten verbinden
-        teile.push(this.formular.wunschdatum.split('-').reverse().join('.'));
+    // Abholtermin für die Bestätigungsseite.
+    // Hat die Person Datum UND Zeitfenster gewählt, ist das ihr Wunschtermin,
+    // z. B. "20.10.2026, 12–16 Uhr (Ihr Wunschtermin)".
+    // Fehlt etwas, ergänzen wir: Datum = frühestes Datum, Zeitfenster = erstes aus der Liste,
+    // z. B. "13.10.2026, 08–12 Uhr (von uns vorgegeben)".
+    termin() {
+      const f = this.formular;
+      if (f.wunschdatum !== '' && f.zeitfenster !== '') {
+        return `${deutschesDatum(f.wunschdatum)}, ${f.zeitfenster} (Ihr Wunschtermin)`;
       }
-      if (this.formular.zeitfenster !== '') {
-        teile.push(this.formular.zeitfenster);
-      }
-      if (teile.length === 0) {
-        return 'kein Wunschtermin angegeben';
-      }
-      return teile.join(', ');
+      const datum = f.wunschdatum !== '' ? f.wunschdatum : this.fruehestesDatum;
+      const zeitfenster = f.zeitfenster !== '' ? f.zeitfenster : this.optionen.zeitfenster[0];
+      return `${deutschesDatum(datum)}, ${zeitfenster} (von uns vorgegeben)`;
     }
   },
 
@@ -216,6 +257,7 @@ createApp({
       handler() { this.fehlerLoeschen('zielgruppen'); },
       deep: true
     },
+    'formular.name'() { this.fehlerLoeschen('name'); },
     'formular.krisengebiet'() { this.fehlerLoeschen('krisengebiet'); },
     'formular.strasse'() { this.fehlerLoeschen('strasse'); },
     'formular.plz'() { this.fehlerLoeschen('plz'); },
@@ -236,6 +278,18 @@ createApp({
       if (f.uebergabeart === '') {
         fehler.uebergabeart = 'Bitte wählen Sie eine Übergabeart.';
       }
+
+      // Name: erst leer, dann unzulässige Zeichen (Whitelist, siehe Erklärung unten),
+      // dann zu lang. Erlaubt sind Buchstaben, Leerzeichen, Punkt, Apostroph und Bindestrich.
+      const name = f.name.trim();
+      if (name === '') {
+        fehler.name = 'Bitte geben Sie Ihren Namen an.';
+      } else if (!/^[\p{L} .'-]+$/u.test(name)) {
+        fehler.name = 'Der Name enthält unzulässige Zeichen.';
+      } else if (name.length > 60) {
+        fehler.name = 'Der Name darf höchstens 60 Zeichen lang sein.';
+      }
+
       if (f.kleidungstypen.length === 0) {
         fehler.kleidungstypen = 'Bitte wählen Sie mindestens einen Kleidungsstück-Typ.';
       }
@@ -265,6 +319,8 @@ createApp({
           fehler.strasse = 'Bitte geben Sie Straße und Hausnummer an.';
         } else if (!/^[\p{L}\p{N} .,'\/-]+$/u.test(strasse)) {
           fehler.strasse = 'Straße und Hausnummer enthalten unzulässige Zeichen.';
+        } else if (strasse.length > 40) {
+          fehler.strasse = 'Straße und Hausnummer dürfen höchstens 40 Zeichen lang sein.';
         }
 
         // PLZ: erst prüfen, ob etwas eingegeben wurde, dann ob es genau
@@ -284,6 +340,8 @@ createApp({
           fehler.ort = 'Bitte geben Sie den Ort an.';
         } else if (!/^[\p{L} .'()-]+$/u.test(ort)) {
           fehler.ort = 'Der Ort enthält unzulässige Zeichen.';
+        } else if (ort.length > 30) {
+          fehler.ort = 'Der Ort darf höchstens 30 Zeichen lang sein.';
         }
 
         // Volumen: Buchstaben, Ziffern, Leerzeichen und . , ' / + -
@@ -292,12 +350,15 @@ createApp({
           fehler.volumen = 'Bitte geben Sie das ungefähre Volumen an.';
         } else if (!/^[\p{L}\p{N} .,'\/+-]+$/u.test(volumen)) {
           fehler.volumen = 'Das Volumen enthält unzulässige Zeichen.';
+        } else if (volumen.length > 50) {
+          fehler.volumen = 'Das Volumen darf höchstens 50 Zeichen lang sein.';
         }
 
-        // Wunschdatum ist freiwillig. Wenn eins gewählt ist, darf es nicht vor heute liegen.
+        // Wunschdatum ist freiwillig. Wenn eins gewählt ist, muss es mindestens
+        // 3 Arbeitstage (Mo–Fr) in der Zukunft liegen (nicht vor fruehestesDatum).
         // Bei Texten im Format JJJJ-MM-TT entspricht der Textvergleich (<) der Datumsreihenfolge.
-        if (f.wunschdatum !== '' && f.wunschdatum < this.heute) {
-          fehler.wunschdatum = 'Das Wunschdatum darf nicht in der Vergangenheit liegen.';
+        if (f.wunschdatum !== '' && f.wunschdatum < this.fruehestesDatum) {
+          fehler.wunschdatum = 'Das Wunschdatum muss mindestens 3 Arbeitstage in der Zukunft liegen.';
         }
         // Zeitfenster ist freiwillig und wird nicht geprüft
       }
@@ -312,6 +373,15 @@ createApp({
     absenden() {
       if (this.pruefen()) {
         this.zeitpunkt = new Date();   // aktuelles Datum und Uhrzeit
+
+        // Registriernummer KS-JJJJMMTT-NNNN: Datum der Registrierung ohne Bindestriche
+        // und eine Zufallszahl von 1000 bis 9999.
+        // Ohne Server kann nicht garantiert werden, dass jede Nummer nur einmal vorkommt;
+        // im Echtbetrieb würde der Server die Nummern fortlaufend vergeben.
+        const datum = datumAlsText(this.zeitpunkt).replaceAll('-', '');   // z. B. "20261010"
+        const zufall = Math.floor(Math.random() * 9000) + 1000;            // 1000 bis 9999
+        this.registriernummer = `KS-${datum}-${zufall}`;
+
         this.bestaetigt = true;
         window.scrollTo(0, 0);         // nach oben scrollen, damit die Bestätigung sichtbar ist
       }
@@ -324,6 +394,7 @@ createApp({
       this.fehler = {};
       this.bestaetigt = false;
       this.zeitpunkt = null;
+      this.registriernummer = '';
       window.scrollTo(0, 0);
     },
 

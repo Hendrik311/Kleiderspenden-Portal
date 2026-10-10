@@ -48,9 +48,21 @@
     <main class="container my-4 flex-grow-1">
 
       <section v-if="seite === 'start'">
-        <h1>Willkommen</h1>
-        <p>Hier können Sie Ihre Kleiderspende registrieren – egal ob Sie die Kleidung bei unserer
-           Geschäftsstelle abgeben oder von uns abholen lassen möchten.</p>
+        <h1>Herzlich willkommen beim Kleiderspenden-Verein aus Erfurt</h1>
+        <p>Wir sind ein gemeinnütziger Verein, der Kinder und Familien in Krisengebieten mit
+           Kleiderspenden unterstützt. Mit Ihrer Kleiderspende können Sie uns dabei helfen.</p>
+        <p>Ihre Spende können Sie auf zwei Wegen an uns übergeben:</p>
+        <ul>
+          <li>Sie können Ihre Kleiderspende in unserer Geschäftsstelle abgeben und vor Ort oder
+              online registrieren.</li>
+          <li>Sie können online Ihre Kleiderspende zur Abholung registrieren und wir holen sie auf
+              einer unserer nächsten Touren ab. (Bitte berücksichtigen Sie, dass nur Abholungen im
+              Postleitzahlengebiet 99 möglich sind.)</li>
+        </ul>
+        <!-- Fester Text; muss bei Änderungen an optionen.krisengebiete (app.js) von Hand angepasst werden -->
+        <p>Sie entscheiden, in welches aktuell betroffene Krisengebiet Ihre Spende gehen soll.
+           Derzeit unterstützen wir humanitäre Projekte in der Ukraine, im Gaza-Streifen, im Sudan
+           und in Myanmar.</p>
         <a class="btn btn-primary" href="#/spende">Jetzt Spende registrieren</a>
       </section>
 
@@ -70,11 +82,18 @@
 
           <!-- Übersicht der Angaben: links die Bezeichnung (dt), rechts der Wert (dd) -->
           <dl class="row">
+            <dt class="col-sm-4">Registriernummer</dt>
+            <dd class="col-sm-8"><strong>{{ registriernummer }}</strong></dd>
+
+            <dt class="col-sm-4">Name</dt>
+            <dd class="col-sm-8">{{ formular.name }}</dd>
+
+            <!-- Hier immer alle gewählten Einträge einzeln (nie "Alle ...") -->
             <dt class="col-sm-4">Kleidungsstück-Typ</dt>
-            <dd class="col-sm-8">{{ kleidungstypenAnzeige }}</dd>
+            <dd class="col-sm-8">{{ kleidungstypenListe }}</dd>
 
             <dt class="col-sm-4">Zielgruppe</dt>
-            <dd class="col-sm-8">{{ zielgruppenAnzeige }}</dd>
+            <dd class="col-sm-8">{{ zielgruppenListe }}</dd>
 
             <dt class="col-sm-4">Krisengebiet</dt>
             <dd class="col-sm-8">{{ formular.krisengebiet }}</dd>
@@ -98,17 +117,18 @@
               </template>
             </dd>
 
-            <!-- Nur bei einer Abholung: Volumen und Wunschtermin -->
+            <!-- Nur bei einer Abholung: Volumen und Termin -->
             <template v-if="formular.uebergabeart === 'abholung'">
               <dt class="col-sm-4">Volumen</dt>
               <dd class="col-sm-8">{{ formular.volumen }}</dd>
 
-              <dt class="col-sm-4">Wunschtermin</dt>
-              <dd class="col-sm-8">{{ wunschterminAnzeige }}</dd>
+              <dt class="col-sm-4">Termin</dt>
+              <dd class="col-sm-8">{{ termin }}</dd>
             </template>
           </dl>
 
-          <p class="text-muted small">Ihre Angaben werden nur in Ihrem Browser angezeigt und nicht gespeichert oder versendet.</p>
+          <p>Bitte halten Sie Ihre Registriernummer bei der Übergabe bereit.</p>
+          <p class="text-muted small">Hinweis: Dies ist ein Prototyp. In dieser Version werden die Angaben nicht gespeichert oder versendet.</p>
 
           <!-- Setzt alles zurück und zeigt wieder das leere Formular -->
           <button type="button" class="btn btn-primary" @click="neueSpende">Neue Spende registrieren</button>
@@ -138,6 +158,14 @@
             <!-- d-block: Meldung immer anzeigen, da sie hier nicht direkt neben einem Eingabefeld steht -->
             <div class="invalid-feedback d-block" v-if="fehler.uebergabeart">{{ fehler.uebergabeart }}</div>
           </fieldset>
+
+          <!-- Name: immer Pflicht, bei Geschäftsstelle und Abholung -->
+          <div class="col-md-6">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" id="name" class="form-control" :class="{ 'is-invalid': fehler.name }"
+                   placeholder="Vor- und Nachname" maxlength="60" v-model="formular.name">
+            <div class="invalid-feedback">{{ fehler.name }}</div>
+          </div>
 
           <!-- Kleidungsstück-Typ: aufklappbare Liste mit Checkboxen (Mehrfachauswahl).
                data-bs-auto-close="outside" lässt die Liste beim Anhaken offen;
@@ -227,10 +255,11 @@
               <h2 class="h5 mt-3 mb-0">Angaben zur Abholung</h2>
             </div>
 
+            <!-- maxlength begrenzt die Eingabe; geprüft wird die Länge zusätzlich in pruefen() -->
             <div class="col-md-6">
               <label for="strasse" class="form-label">Straße und Hausnummer</label>
               <input type="text" id="strasse" class="form-control" :class="{ 'is-invalid': fehler.strasse }"
-                     v-model="formular.strasse">
+                     maxlength="40" v-model="formular.strasse">
               <div class="invalid-feedback">{{ fehler.strasse }}</div>
             </div>
 
@@ -245,23 +274,27 @@
             <div class="col-md-4">
               <label for="ort" class="form-label">Ort</label>
               <input type="text" id="ort" class="form-control" :class="{ 'is-invalid': fehler.ort }"
-                     v-model="formular.ort">
+                     maxlength="30" v-model="formular.ort">
               <div class="invalid-feedback">{{ fehler.ort }}</div>
             </div>
 
             <div class="col-md-4">
               <label for="volumen" class="form-label">Volumen</label>
               <input type="text" id="volumen" class="form-control" :class="{ 'is-invalid': fehler.volumen }"
-                     placeholder="z. B. 1 Tüte oder 2 Kartons" v-model="formular.volumen">
+                     placeholder="z. B. 1 Tüte oder 2 Kartons" maxlength="50" v-model="formular.volumen">
               <div class="invalid-feedback">{{ fehler.volumen }}</div>
             </div>
 
             <div class="col-md-4">
               <label for="wunschdatum" class="form-label">Wunschdatum</label>
-              <!-- :min="heute" sperrt im Kalender alle Tage vor dem heutigen Datum -->
+              <!-- :min="fruehestesDatum" sperrt im Kalender alle Tage vor heute + 3 Arbeitstage (Mo–Fr) -->
               <input type="date" id="wunschdatum" class="form-control" :class="{ 'is-invalid': fehler.wunschdatum }"
-                     :min="heute" v-model="formular.wunschdatum">
+                     :min="fruehestesDatum" v-model="formular.wunschdatum">
               <div class="invalid-feedback">{{ fehler.wunschdatum }}</div>
+              <!-- Hinweis zum Termin direkt unter dem Wunschdatum
+                   (nur bei Abholung sichtbar, da innerhalb des template-Blocks) -->
+              <div class="form-text">Ohne Angabe legen wir einen Termin zum nächstmöglichen Zeitpunkt fest
+                (frühestens in 3 Arbeitstagen, 08–12 Uhr).</div>
             </div>
 
             <div class="col-md-4">
@@ -325,14 +358,18 @@
 
         <h2 class="h5 mt-4">2. Erhobene Daten</h2>
         <p>Bei der Registrierung einer Spende verarbeiten wir die von Ihnen eingegebenen Angaben
-           (z. B. Art der Kleidung, Krisengebiet und bei einer Abholung Ihre Adresse) ausschließlich
+           (z. B. Ihr Name, die Art der Kleidung, das Krisengebiet und bei einer Abholung Ihre Adresse) ausschließlich
            zur Abwicklung der Spende.</p>
 
         <h2 class="h5 mt-4">3. Rechtsgrundlage</h2>
-        <p>[Rechtsgrundlage nach Art. 6 Abs. 1 DSGVO]</p>
+        <p>Die Verarbeitung erfolgt zur Durchführung Ihrer Spende auf Grundlage von
+           Art. 6 Abs. 1 Satz 1 lit. b DSGVO.</p>
 
         <h2 class="h5 mt-4">4. Speicherdauer</h2>
-        <p>[Angaben zur Speicherdauer]</p>
+        <p>In dieser Prototyp-Version werden die eingegebenen Daten nicht gespeichert. Sie bleiben
+           ausschließlich in Ihrem Browser und gehen beim Neuladen der Seite verloren. Im Echtbetrieb
+           würden die Angaben nach Abschluss der Übergabe bzw. Abholung gelöscht, spätestens jedoch
+           nach drei Monaten.</p>
 
         <h2 class="h5 mt-4">5. Ihre Rechte</h2>
         <p>Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung,
