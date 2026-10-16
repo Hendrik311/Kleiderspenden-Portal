@@ -77,7 +77,7 @@ createApp({
       optionen: {
         kleidungstypen: ['Jacken', 'Hoodie/Sweatshirtjacke', 'T-Shirt', 'Hosen', 'Unterwäsche', 'Socken'],
         zielgruppen: ['Herren', 'Damen', 'Kinder'],
-        krisengebiete: ['Ukraine', 'Gaza-Streifen', 'Sudan', 'Myanmar'],
+        krisengebiete: ['Ukraine', 'Gazastreifen', 'Sudan', 'Myanmar'],
         zeitfenster: ['08–12 Uhr', '12–16 Uhr', '16–19 Uhr']
       },
 
@@ -202,14 +202,14 @@ createApp({
     },
 
     // Abholtermin für die Bestätigungsseite.
-    // Hat die Person Datum UND Zeitfenster gewählt, ist das ihr Wunschtermin,
-    // z. B. "20.10.2026, 12–16 Uhr (Ihr Wunschtermin)".
+    // Hat die Person Datum UND Zeitfenster gewählt, gilt ihr Wunschdatum,
+    // z. B. "20.10.2026, 12–16 Uhr (Ihr Wunschdatum)".
     // Fehlt etwas, ergänzen wir: Datum = frühestes Datum, Zeitfenster = erstes aus der Liste,
     // z. B. "13.10.2026, 08–12 Uhr (von uns vorgegeben)".
     termin() {
       const f = this.formular;
       if (f.wunschdatum !== '' && f.zeitfenster !== '') {
-        return `${deutschesDatum(f.wunschdatum)}, ${f.zeitfenster} (Ihr Wunschtermin)`;
+        return `${deutschesDatum(f.wunschdatum)}, ${f.zeitfenster} (Ihr Wunschdatum)`;
       }
       const datum = f.wunschdatum !== '' ? f.wunschdatum : this.fruehestesDatum;
       const zeitfenster = f.zeitfenster !== '' ? f.zeitfenster : this.optionen.zeitfenster[0];
